@@ -191,21 +191,17 @@ folium.TileLayer(
 ).add_to(m)
 
 # ── Protected Areas (WDPA) ────────────────────────────────────────────────────
-# Uses the public UNEP-WCMC ArcGIS MapServer — no API key required.
-# Source: https://gis.unep-wcmc.org/arcgis/rest/services/wdpa/public/MapServer
-folium.WmsTileLayer(
-    url="https://gis.unep-wcmc.org/arcgis/rest/services/wdpa/public/MapServer/WMSServer",
-    layers="0",
-    fmt="image/png",
-    transparent=True,
+# Uses the public UNEP-WCMC tile cache — no API key required.
+# Source: https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/The_World_Database_of_Protected_Areas/MapServer
+folium.TileLayer(
+    tiles=(
+        "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/"
+        "The_World_Database_of_Protected_Areas/MapServer/tile/{z}/{y}/{x}"
+    ),
+    attr="UNEP-WCMC and IUCN (2026), Protected Planet: WDPA. DOI: https://doi.org/10.34892/6fwd-af11",
     name="Protected Areas (WDPA)",
     show=False,
-    opacity=0.35,
-    attr=(
-        "UNEP-WCMC and IUCN (2025), Protected Planet: The World Database "
-        "on Protected Areas (WDPA). Cambridge, UK: UNEP-WCMC and IUCN. "
-        "Available at: www.protectedplanet.net"
-    ),
+    opacity=0.5,
 ).add_to(m)
 
 # Species layers
