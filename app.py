@@ -26,7 +26,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 1rem; }
+    .block-container { padding-top: 2.5rem; }
     /* Hide the sidebar toggle arrow entirely */
     [data-testid="collapsedControl"] { display: none; }
     </style>
@@ -171,7 +171,6 @@ def add_legend(fmap: folium.Map, entries: list[tuple[str, str]]) -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 st.markdown("### 🦒 Giraffa Range")
-st.caption("Click any polygon for attributes · use the layer panel to toggle species and switch basemap.")
 
 # Build map — no default tiles so LayerControl owns everything
 m = folium.Map(location=[3, 30], zoom_start=4, tiles=None)
@@ -237,3 +236,9 @@ if area_stats:
     cols = st.columns(len(area_stats))
     for col, (name, km2) in zip(cols, area_stats.items()):
         col.metric(label=name, value=f"{km2:,.0f} km²", help=SPECIES[name]["scientific"])
+
+st.divider()
+st.caption(
+    "**Source:** Giraffe Conservation Foundation (2025). *Current distribution range of the four giraffe species.* "
+    "[Download shapefiles](https://github.com/Giraffe-Conservation-Foundation/GiraffaRange2025)"
+)
