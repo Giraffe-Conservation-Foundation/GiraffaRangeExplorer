@@ -13,7 +13,7 @@ import requests
 import streamlit as st
 from streamlit_folium import st_folium
 
-# ── Page config ──────────────────────────────────────────────────────────────
+# ── Page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="Giraffa Range",
@@ -22,87 +22,98 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Styling ───────────────────────────────────────────────────────────────────
-
 st.markdown(
-    """
-    <style>
-    /* Hide Streamlit default top padding */
-    .block-container { padding-top: 1.5rem; }
-
-    /* Species card */
-    .species-card {
-        border-left: 4px solid var(--card-color);
-        padding: 0.6rem 0.8rem;
-        margin-bottom: 0.8rem;
-        border-radius: 0 6px 6px 0;
-        background: rgba(255,255,255,0.05);
-    }
-    .species-name  { font-weight: 700; font-size: 0.95rem; margin: 0; }
-    .species-sci   { font-style: italic; font-size: 0.78rem; opacity: 0.75; margin: 0; }
-    .species-badge {
-        display: inline-block;
-        font-size: 0.7rem;
-        font-weight: 600;
-        padding: 1px 7px;
-        border-radius: 10px;
-        margin-top: 4px;
-    }
-    </style>
-    """,
+    "<style>.block-container { padding-top: 1.5rem; }</style>",
     unsafe_allow_html=True,
 )
 
+# ── Subspecies colour map ─────────────────────────────────────────────────────
+# Keyed by lowercase fragments that uniquely identify each subspecies.
+# The lookup tries longest-match first to avoid "camelopardalis" swallowing
+# "camelopardalis camelopardalis" etc.
+
+SUBS_COLORS: dict[str, str] = {
+    # Full trinomials (checked first)
+    "camelopardalis camelopardalis": "#E6751A",
+    "tippelskirchi tippelskirchi":   "#216DCC",
+    "giraffa giraffa":               "#4D9C2C",
+    # Unique epithets
+    "peralta":      "#DB0F0F",
+    "antiquorum":   "#9A392B",
+    "reticulata":   "#C41697",
+    "thornicrofti": "#5BAED9",
+    "angolensis":   "#457132",
+}
+
+# Species fallback colours (used when no subspecies match is found)
+SPECIES_FALLBACK: dict[str, str] = {
+    "masai":       "#216DCC",
+    "northern":    "#E6751A",
+    "reticulated": "#C41697",
+    "southern":    "#4D9C2C",
+}
+
+# Legend entries: label → colour
+LEGEND_ENTRIES: list[tuple[str, str]] = [
+    ("G. c. peralta",                   "#DB0F0F"),
+    ("G. c. camelopardalis",            "#E6751A"),
+    ("G. c. antiquorum",                "#9A392B"),
+    ("G. reticulata",                   "#C41697"),
+    ("G. t. tippelskirchi",             "#216DCC"),
+    ("G. t. thornicrofti",              "#5BAED9"),
+    ("G. g. giraffa",                   "#4D9C2C"),
+    ("G. g. angolensis",                "#457132"),
+]
+
 # ── Species configuration ─────────────────────────────────────────────────────
 
-SPECIES = {
+SPECIES: dict[str, dict] = {
     "Masai Giraffe": {
         "scientific": "Giraffa tippelskirchi",
-        "prefix": "masai",
-        "color": "#E87722",      # GCF orange
-        "status": "Vulnerable",
-        "status_bg": "#F5A623",
-        "status_text": "#000",
-        "description": (
-            "The most numerous giraffe species, found in Tanzania and Kenya. "
-            "Population declined ~32% over the last three decades."
-        ),
+        "prefix":     "masai",
     },
     "Northern Giraffe": {
         "scientific": "Giraffa camelopardalis",
-        "prefix": "northern",
-        "color": "#C0392B",      # red
-        "status": "Vulnerable",
-        "status_bg": "#E74C3C",
-        "status_text": "#fff",
-        "description": (
-            "The rarest species, with fewer than 6,000 individuals in fragmented "
-            "populations across Central and West Africa."
-        ),
+        "prefix":     "northern",
     },
     "Reticulated Giraffe": {
         "scientific": "Giraffa reticulata",
-        "prefix": "reticulated",
-        "color": "#2471A3",      # blue
-        "status": "Endangered",
-        "status_bg": "#D35400",
-        "status_text": "#fff",
-        "description": (
-            "Recognisable by its large, clearly defined patches. Found in "
-            "north-eastern Kenya, southern Ethiopia, and Somalia."
-        ),
+        "prefix":     "reticulated",
     },
     "Southern Giraffe": {
         "scientific": "Giraffa giraffa",
-        "prefix": "southern",
-        "color": "#1E8449",      # green
-        "status": "Least Concern",
-        "status_bg": "#27AE60",
-        "status_text": "#fff",
-        "description": (
-            "The most stable population, distributed across southern African "
-            "countries including Namibia, Botswana, Zimbabwe, and South Africa."
+        "prefix":     "southern",
+    },
+}
+
+# ── Basemap options ───────────────────────────────────────────────────────────
+
+BASEMAPS: dict[str, dict] = {
+    "Light (CartoDB)": {
+        "tiles": "CartoDB positron",
+        "attr":  "",
+    },
+    "Dark (CartoDB)": {
+        "tiles": "CartoDB dark_matter",
+        "attr":  "",
+    },
+    "Street (OpenStreetMap)": {
+        "tiles": "OpenStreetMap",
+        "attr":  "",
+    },
+    "Satellite (Esri)": {
+        "tiles": (
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Imagery/MapServer/tile/{z}/{y}/{x}"
         ),
+        "attr": "Tiles © Esri",
+    },
+    "Terrain (Esri)": {
+        "tiles": (
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}"
+        ),
+        "attr": "Tiles © Esri",
     },
 }
 
@@ -113,7 +124,7 @@ BASE_URL = (
 EXTENSIONS = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
 
 
-# ── Data loading ──────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
 def load_range(prefix: str) -> gpd.GeoDataFrame | None:
@@ -127,7 +138,7 @@ def load_range(prefix: str) -> gpd.GeoDataFrame | None:
                 with open(os.path.join(tmpdir, f"range{ext}"), "wb") as fh:
                     fh.write(r.content)
             except requests.RequestException:
-                pass  # optional files (.cpg) may not exist; continue
+                pass
 
         shp_path = os.path.join(tmpdir, "range.shp")
         if not os.path.exists(shp_path):
@@ -140,9 +151,78 @@ def load_range(prefix: str) -> gpd.GeoDataFrame | None:
 
 
 def area_km2(gdf: gpd.GeoDataFrame) -> float:
-    """Return total area in km²."""
-    gdf_proj = gdf.to_crs(epsg=6933)   # equal-area projection
+    gdf_proj = gdf.to_crs(epsg=6933)
     return gdf_proj.geometry.area.sum() / 1e6
+
+
+def color_for_properties(props: dict, fallback: str) -> str:
+    """
+    Scan all string properties of a GeoJSON feature and return the matching
+    subspecies colour. Tries longest keys first to avoid partial collisions.
+    """
+    candidates: list[str] = []
+    for v in props.values():
+        if isinstance(v, str):
+            candidates.append(v.lower().strip())
+
+    # Sort keys longest-first so compound epithets beat single-word ones
+    for key in sorted(SUBS_COLORS, key=len, reverse=True):
+        for candidate in candidates:
+            if key in candidate or candidate in key:
+                return SUBS_COLORS[key]
+
+    return fallback
+
+
+def make_style(fallback: str):
+    """Return a folium style_function that colours by subspecies."""
+    def _style(feature):
+        color = color_for_properties(
+            feature.get("properties") or {}, fallback
+        )
+        return {
+            "fillColor": color,
+            "color":     color,
+            "weight":    1.2,
+            "fillOpacity": 0.40,
+        }
+    return _style
+
+
+def make_highlight(fallback: str):
+    def _highlight(feature):
+        color = color_for_properties(
+            feature.get("properties") or {}, fallback
+        )
+        return {
+            "fillColor": color,
+            "color":     color,
+            "weight":    2.5,
+            "fillOpacity": 0.65,
+        }
+    return _highlight
+
+
+def add_legend(fmap: folium.Map, entries: list[tuple[str, str]]) -> None:
+    """Inject a simple HTML legend into the folium map."""
+    rows = "".join(
+        f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'
+        f'<div style="width:14px;height:14px;border-radius:3px;'
+        f'background:{color};opacity:0.85;flex-shrink:0"></div>'
+        f'<span style="font-size:12px;font-style:italic">{label}</span></div>'
+        for label, color in entries
+    )
+    legend_html = f"""
+    <div style="
+        position: fixed; bottom: 30px; right: 10px; z-index: 1000;
+        background: rgba(255,255,255,0.92); padding: 10px 14px;
+        border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        font-family: sans-serif; min-width: 190px;">
+      <div style="font-weight:700;font-size:12px;margin-bottom:6px">Subspecies</div>
+      {rows}
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(legend_html))
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -152,31 +232,20 @@ with st.sidebar:
     st.caption("Current (2025) distribution maps for the four giraffe species")
     st.divider()
 
-    st.markdown("**Show species on map**")
-    selected = {}
-    for name, cfg in SPECIES.items():
+    st.markdown("**Show species**")
+    selected: dict[str, bool] = {}
+    for name in SPECIES:
         selected[name] = st.checkbox(name, value=True, key=f"chk_{name}")
 
     st.divider()
 
-    # Species info cards for checked species
-    for name, cfg in SPECIES.items():
-        if not selected[name]:
-            continue
-        st.markdown(
-            f"""
-            <div class="species-card" style="--card-color:{cfg['color']}">
-              <p class="species-name" style="color:{cfg['color']}">{name}</p>
-              <p class="species-sci">{cfg['scientific']}</p>
-              <span class="species-badge"
-                    style="background:{cfg['status_bg']};color:{cfg['status_text']}">
-                {cfg['status']}
-              </span>
-              <p style="font-size:0.78rem;margin-top:6px;opacity:0.85">{cfg['description']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown("**Basemap**")
+    basemap_choice = st.selectbox(
+        "Basemap",
+        options=list(BASEMAPS.keys()),
+        index=0,
+        label_visibility="collapsed",
+    )
 
     st.divider()
     st.caption(
@@ -188,17 +257,14 @@ with st.sidebar:
 # ── Main area ─────────────────────────────────────────────────────────────────
 
 st.markdown("### Range Explorer")
-st.caption(
-    "Toggle species in the sidebar. Click any polygon for attributes. "
-    "Scroll or pinch to zoom."
-)
+st.caption("Toggle species · change basemap · click a polygon for attributes · scroll to zoom.")
 
-# Load data and build map
+bm = BASEMAPS[basemap_choice]
 m = folium.Map(
     location=[3, 30],
     zoom_start=4,
-    tiles="CartoDB positron",
-    width="100%",
+    tiles=bm["tiles"],
+    attr=bm["attr"],
 )
 
 any_loaded = False
@@ -218,35 +284,28 @@ for name, cfg in SPECIES.items():
     any_loaded = True
     area_stats[name] = area_km2(gdf)
 
-    # Build tooltip fields from available columns
-    tooltip_fields = [c for c in gdf.columns if c.lower() != "geometry"][:5]
+    tooltip_fields = [c for c in gdf.columns if c.lower() != "geometry"][:6]
+    fallback = SPECIES_FALLBACK[cfg["prefix"]]
 
     folium.GeoJson(
         data=gdf.__geo_interface__,
         name=name,
-        style_function=lambda _f, c=cfg["color"]: {
-            "fillColor": c,
-            "color": c,
-            "weight": 1.2,
-            "fillOpacity": 0.35,
-        },
-        highlight_function=lambda _f, c=cfg["color"]: {
-            "fillColor": c,
-            "color": c,
-            "weight": 2.5,
-            "fillOpacity": 0.6,
-        },
-        tooltip=folium.GeoJsonTooltip(
-            fields=tooltip_fields,
-            localize=True,
-        ) if tooltip_fields else None,
-        popup=folium.GeoJsonPopup(fields=tooltip_fields) if tooltip_fields else None,
+        style_function=make_style(fallback),
+        highlight_function=make_highlight(fallback),
+        tooltip=(
+            folium.GeoJsonTooltip(fields=tooltip_fields, localize=True)
+            if tooltip_fields else None
+        ),
+        popup=(
+            folium.GeoJsonPopup(fields=tooltip_fields)
+            if tooltip_fields else None
+        ),
     ).add_to(m)
 
+add_legend(m, LEGEND_ENTRIES)
 folium.LayerControl(collapsed=False).add_to(m)
 
-# Render map
-st_folium(m, height=580, use_container_width=True, returned_objects=[])
+st_folium(m, height=600, use_container_width=True, returned_objects=[])
 
 # ── Area statistics ───────────────────────────────────────────────────────────
 
@@ -255,12 +314,10 @@ if area_stats:
     st.markdown("**Range area estimates**")
     cols = st.columns(len(area_stats))
     for col, (name, km2) in zip(cols, area_stats.items()):
-        cfg = SPECIES[name]
         col.metric(
             label=name,
             value=f"{km2:,.0f} km²",
-            help=f"{cfg['scientific']}",
+            help=SPECIES[name]["scientific"],
         )
-
 elif not any(selected.values()):
     st.info("Select at least one species in the sidebar to display its range.")
