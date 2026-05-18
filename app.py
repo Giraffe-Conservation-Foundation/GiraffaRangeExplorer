@@ -110,6 +110,7 @@ def load_wdpa_africa() -> gpd.GeoDataFrame | None:
                 "where": "1=1",
                 "geometry": "-20,-35,55,38",
                 "geometryType": "esriGeometryEnvelope",
+                "inSR": "4326",
                 "spatialRel": "esriSpatialRelIntersects",
                 "outFields": "NAME,DESIG,IUCN_CAT,STATUS",
                 "outSR": "4326",
@@ -120,12 +121,9 @@ def load_wdpa_africa() -> gpd.GeoDataFrame | None:
             }, timeout=60)
             r.raise_for_status()
             data = r.json()
-        except Exception as e:
-            st.write("DEBUG wdpa fetch error:", str(e))
+        except Exception:
             break
         batch = data.get("features", [])
-        if not batch:
-            st.write("DEBUG wdpa empty batch, raw response:", str(data)[:300])
         all_features.extend(batch)
         if not data.get("exceededTransferLimit", False) or len(batch) < 2000:
             break
@@ -134,8 +132,7 @@ def load_wdpa_africa() -> gpd.GeoDataFrame | None:
         return None
     try:
         return gpd.GeoDataFrame.from_features(all_features, crs="EPSG:4326")
-    except Exception as e:
-        st.write("DEBUG wdpa GDF error:", str(e))
+    except Exception:
         return None
 
 
@@ -238,8 +235,6 @@ folium.TileLayer(
 with st.spinner("Loading protected areas…"):
     _wdpa = load_wdpa_africa()
 
-st.write("DEBUG wdpa:", None if _wdpa is None else f"{len(_wdpa)} features")
-
 if _wdpa is not None:
     folium.GeoJson(
         data=_wdpa.__geo_interface__,
@@ -257,7 +252,7 @@ if _wdpa is not None:
             "fillOpacity": 0.55,
         },
         tooltip=folium.GeoJsonTooltip(
-            fields=["NAME", "DESIG", "IUCN_CAT"],
+            fields=["name", "desig", "iucn_cat"],
             aliases=["Name", "Designation", "IUCN Category"],
             localize=True,
         ),
