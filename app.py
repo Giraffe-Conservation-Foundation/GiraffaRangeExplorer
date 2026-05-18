@@ -134,14 +134,14 @@ def color_for_props(props: dict, fallback: str) -> str:
 def make_style(fallback: str):
     def _style(feature):
         color = color_for_props(feature.get("properties") or {}, fallback)
-        return {"fillColor": color, "color": color, "weight": 1.2, "fillOpacity": 0.40}
+        return {"fillColor": color, "color": color, "weight": 1.2, "fillOpacity": 0.60}
     return _style
 
 
 def make_highlight(fallback: str):
     def _hl(feature):
         color = color_for_props(feature.get("properties") or {}, fallback)
-        return {"fillColor": color, "color": color, "weight": 2.5, "fillOpacity": 0.65}
+        return {"fillColor": color, "color": color, "weight": 2.5, "fillOpacity": 0.80}
     return _hl
 
 
@@ -200,6 +200,7 @@ folium.TileLayer(
     ),
     attr="UNEP-WCMC and IUCN (2026), Protected Planet: WDPA. DOI: https://doi.org/10.34892/6fwd-af11",
     name="Protected Areas (WDPA)",
+    overlay=True,
     show=False,
     opacity=0.5,
 ).add_to(m)
