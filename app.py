@@ -190,6 +190,24 @@ folium.TileLayer(
     name="Terrain (Esri)",
 ).add_to(m)
 
+# ── Protected Areas (WDPA) ────────────────────────────────────────────────────
+# Uses the public UNEP-WCMC ArcGIS MapServer — no API key required.
+# Source: https://gis.unep-wcmc.org/arcgis/rest/services/wdpa/public/MapServer
+folium.WmsTileLayer(
+    url="https://gis.unep-wcmc.org/arcgis/rest/services/wdpa/public/MapServer/WMSServer",
+    layers="0",
+    fmt="image/png",
+    transparent=True,
+    name="Protected Areas (WDPA)",
+    show=False,
+    opacity=0.35,
+    attr=(
+        "UNEP-WCMC and IUCN (2025), Protected Planet: The World Database "
+        "on Protected Areas (WDPA). Cambridge, UK: UNEP-WCMC and IUCN. "
+        "Available at: www.protectedplanet.net"
+    ),
+).add_to(m)
+
 # Species layers
 area_stats: dict[str, float] = {}
 
