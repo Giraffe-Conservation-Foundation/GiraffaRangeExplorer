@@ -45,7 +45,7 @@ SUBS_COLORS: dict[str, str] = {
     "peralta":      "#DB0F0F",
     "antiquorum":   "#9A392B",
     "reticulata":   "#C41697",
-    "thornicrofti": "#5BAED9",
+    "thornicrofti": "#1ABCAF",
     "angolensis":   "#457132",
 }
 
@@ -62,7 +62,7 @@ LEGEND_ENTRIES: list[tuple[str, str]] = [
     ("G. c. antiquorum",      "#9A392B"),
     ("G. reticulata",         "#C41697"),
     ("G. t. tippelskirchi",   "#216DCC"),
-    ("G. t. thornicrofti",    "#5BAED9"),
+    ("G. t. thornicrofti",    "#1ABCAF"),
     ("G. g. giraffa",         "#4D9C2C"),
     ("G. g. angolensis",      "#457132"),
 ]
@@ -167,7 +167,7 @@ def color_for_props(props: dict, fallback: str) -> str:
     candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
     for key in sorted(SUBS_COLORS, key=len, reverse=True):
         for c in candidates:
-            if key in c or c in key:
+            if key in c:
                 return SUBS_COLORS[key]
     return fallback
 
