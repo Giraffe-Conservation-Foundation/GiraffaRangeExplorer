@@ -165,7 +165,7 @@ def area_km2(gdf: gpd.GeoDataFrame) -> float:
 
 def color_for_props(props: dict, fallback: str) -> str:
     candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
-    for key in sorted(SUBS_COLORS, key=len, reverse=True):
+    for key in sorted(SUBS_COLORS, key=len):
         for c in candidates:
             if key in c:
                 return SUBS_COLORS[key]
