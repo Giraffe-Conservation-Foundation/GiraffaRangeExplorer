@@ -186,8 +186,11 @@ def subs_key_for_props(props: dict) -> str | None:
     """
     candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
 
-    # Pass 1 — substring match, longest keys first
-    for key in sorted(SUBS_COLORS, key=len, reverse=True):
+    # Pass 1 — substring match, shortest keys first so unique single epithets
+    # (e.g. "angolensis") are matched before compound keys that could be
+    # substrings of longer field values (e.g. "giraffa giraffa" inside
+    # "giraffa giraffa angolensis").
+    for key in sorted(SUBS_COLORS, key=len):
         for c in candidates:
             if key in c:
                 return key
