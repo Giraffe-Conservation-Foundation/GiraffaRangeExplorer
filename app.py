@@ -176,13 +176,32 @@ def area_km2(gdf: gpd.GeoDataFrame) -> float:
 
 
 def subs_key_for_props(props: dict) -> str | None:
-    """Return the SUBS_COLORS key that matches any string value in props."""
+    """Return the SUBS_COLORS key that matches any string value in props.
+
+    Two-pass strategy:
+    1. Substring match on the full key (handles fields like "Giraffa tippelskirchi tippelskirchi").
+    2. Exact-value match on the single epithet for compound duplicate keys
+       (handles fields that store just "tippelskirchi" for the nominate subspecies).
+       Exact match avoids false positives from genus-name fields like "Giraffa giraffa".
+    """
     candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
-    # Longest keys first so compound epithets match before single words
+
+    # Pass 1 — substring match, longest keys first
     for key in sorted(SUBS_COLORS, key=len, reverse=True):
         for c in candidates:
             if key in c:
                 return key
+
+    # Pass 2 — for compound duplicate keys (e.g. "tippelskirchi tippelskirchi"),
+    # check whether any field value is exactly the single epithet
+    for key in sorted(SUBS_COLORS, key=len, reverse=True):
+        words = key.split()
+        if len(words) == 2 and words[0] == words[1]:
+            single = words[0]
+            for c in candidates:
+                if c == single:
+                    return key
+
     return None
 
 
