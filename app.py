@@ -56,6 +56,18 @@ SPECIES_FALLBACK: dict[str, str] = {
     "southern":    "#4D9C2C",
 }
 
+# Maps SUBS_COLORS keys → display labels (same order as legend)
+SUBS_LABELS: dict[str, str] = {
+    "peralta":                      "G. c. peralta",
+    "camelopardalis camelopardalis": "G. c. camelopardalis",
+    "antiquorum":                   "G. c. antiquorum",
+    "reticulata":                   "G. reticulata",
+    "tippelskirchi tippelskirchi":  "G. t. tippelskirchi",
+    "thornicrofti":                 "G. t. thornicrofti",
+    "giraffa giraffa":              "G. g. giraffa",
+    "angolensis":                   "G. g. angolensis",
+}
+
 LEGEND_ENTRIES: list[tuple[str, str]] = [
     ("G. c. peralta",         "#DB0F0F"),
     ("G. c. camelopardalis",  "#E6751A"),
@@ -163,6 +175,37 @@ def area_km2(gdf: gpd.GeoDataFrame) -> float:
     return gdf.to_crs(epsg=6933).geometry.area.sum() / 1e6
 
 
+def subs_key_for_props(props: dict) -> str | None:
+    """Return the SUBS_COLORS key that matches any string value in props."""
+    candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
+    # Longest keys first so compound epithets match before single words
+    for key in sorted(SUBS_COLORS, key=len, reverse=True):
+        for c in candidates:
+            if key in c:
+                return key
+    return None
+
+
+def subs_area_km2(gdf: gpd.GeoDataFrame) -> dict[str, float]:
+    """Return {display_label: km²} per subspecies found in gdf, ordered by SUBS_LABELS."""
+    gdf_ea = gdf.to_crs(epsg=6933).copy()
+
+    def _get_key(row):
+        props = {k: v for k, v in row.items() if k != "geometry"}
+        return subs_key_for_props(props)
+
+    gdf_ea["_subs_key"] = gdf_ea.apply(_get_key, axis=1)
+
+    raw: dict[str, float] = {}
+    for key, group in gdf_ea.groupby("_subs_key", dropna=True):
+        label = SUBS_LABELS.get(str(key), str(key))
+        raw[label] = group.geometry.area.sum() / 1e6
+
+    # Return in canonical legend order
+    ordered = {lbl: raw[lbl] for lbl in SUBS_LABELS.values() if lbl in raw}
+    return ordered
+
+
 def color_for_props(props: dict, fallback: str) -> str:
     candidates = [v.lower().strip() for v in props.values() if isinstance(v, str)]
     for key in sorted(SUBS_COLORS, key=len):
@@ -261,6 +304,7 @@ if _wdpa is not None:
 
 # Species layers
 area_stats: dict[str, float] = {}
+subs_stats: dict[str, dict[str, float]] = {}
 
 for name, cfg in SPECIES.items():
     with st.spinner(f"Loading {name}…"):
@@ -271,6 +315,7 @@ for name, cfg in SPECIES.items():
         continue
 
     area_stats[name] = area_km2(gdf)
+    subs_stats[name] = subs_area_km2(gdf)
     tooltip_fields = [c for c in gdf.columns if c.lower() != "geometry"][:6]
     fallback = SPECIES_FALLBACK[cfg["prefix"]]
 
@@ -305,6 +350,14 @@ if area_stats:
     cols = st.columns(len(area_stats))
     for col, (name, km2) in zip(cols, area_stats.items()):
         col.metric(label=name, value=f"{km2:,.0f} km²", help=SPECIES[name]["scientific"])
+        for subs_label, subs_km2 in subs_stats.get(name, {}).items():
+            col.markdown(
+                f"<span style='font-size:12px;color:#555;font-style:italic'>"
+                f"{subs_label}</span>"
+                f"<span style='font-size:12px;color:#555'>"
+                f": {subs_km2:,.0f} km²</span>",
+                unsafe_allow_html=True,
+            )
 
 st.divider()
 st.caption(
