@@ -258,12 +258,6 @@ def add_legend(fmap: folium.Map, entries: list[tuple[str, str]]) -> None:
 
 st.markdown("### 🦒 Giraffa Range")
 
-show_wdpa = st.checkbox(
-    "Show Protected Areas (WDPA)",
-    value=False,
-    help="Overlay protected areas from the UNEP-WCMC World Database on Protected Areas. First load may take a moment.",
-)
-
 # Build map — no default tiles so LayerControl owns everything
 m = folium.Map(location=[3, 30], zoom_start=4, tiles=None)
 
@@ -283,35 +277,32 @@ folium.TileLayer(
 ).add_to(m)
 
 # ── Protected Areas (WDPA) ────────────────────────────────────────────────────
-if show_wdpa:
-    with st.spinner("Loading protected areas…"):
-        _wdpa = load_wdpa_africa()
+with st.spinner("Loading protected areas…"):
+    _wdpa = load_wdpa_africa()
 
-    if _wdpa is None:
-        st.warning("Could not load protected areas — check your connection.")
-    else:
-        folium.GeoJson(
-            data=_wdpa.__geo_interface__,
-            name="Protected Areas (WDPA)",
-            style_function=lambda f: {
-                "fillColor": "#888888",
-                "color":     "#555555",
-                "weight":    0.8,
-                "fillOpacity": 0.30,
-            },
-            highlight_function=lambda f: {
-                "fillColor": "#666666",
-                "color":     "#333333",
-                "weight":    2.0,
-                "fillOpacity": 0.55,
-            },
-            tooltip=folium.GeoJsonTooltip(
-                fields=["name", "desig", "iucn_cat"],
-                aliases=["Name", "Designation", "IUCN Category"],
-                localize=True,
-            ),
-            show=True,
-        ).add_to(m)
+if _wdpa is not None:
+    folium.GeoJson(
+        data=_wdpa.__geo_interface__,
+        name="Protected Areas (WDPA)",
+        style_function=lambda f: {
+            "fillColor": "#888888",
+            "color":     "#555555",
+            "weight":    0.8,
+            "fillOpacity": 0.30,
+        },
+        highlight_function=lambda f: {
+            "fillColor": "#666666",
+            "color":     "#333333",
+            "weight":    2.0,
+            "fillOpacity": 0.55,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=["name", "desig", "iucn_cat"],
+            aliases=["Name", "Designation", "IUCN Category"],
+            localize=True,
+        ),
+        show=False,
+    ).add_to(m)
 
 # Species layers
 area_stats: dict[str, float] = {}
