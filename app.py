@@ -111,41 +111,16 @@ EXTENSIONS = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
 
 @st.cache_data(show_spinner=False)
 def load_wdpa_africa() -> gpd.GeoDataFrame | None:
-    """Fetch WDPA polygons for Africa from the public UNEP-WCMC FeatureServer."""
+    """Load simplified WDPA Africa GeoJSON hosted in this repo."""
+    import io
     url = (
-        "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/"
-        "The_World_Database_of_Protected_Areas/FeatureServer/1/query"
+        "https://raw.githubusercontent.com/"
+        "Giraffe-Conservation-Foundation/GiraffaRangeExplorer/main/WDPA_Africa.geojson"
     )
-    all_features: list = []
-    offset = 0
-    while True:
-        try:
-            r = requests.get(url, params={
-                "where": "1=1",
-                "geometry": "-20,-35,55,38",
-                "geometryType": "esriGeometryEnvelope",
-                "inSR": "4326",
-                "spatialRel": "esriSpatialRelIntersects",
-                "outFields": "NAME,DESIG,IUCN_CAT,STATUS",
-                "outSR": "4326",
-                "maxAllowableOffset": 0.01,
-                "resultOffset": offset,
-                "resultRecordCount": 2000,
-                "f": "geojson",
-            }, timeout=60)
-            r.raise_for_status()
-            data = r.json()
-        except Exception:
-            break
-        batch = data.get("features", [])
-        all_features.extend(batch)
-        if not data.get("exceededTransferLimit", False) or len(batch) < 2000:
-            break
-        offset += 2000
-    if not all_features:
-        return None
     try:
-        gdf = gpd.GeoDataFrame.from_features(all_features, crs="EPSG:4326")
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        gdf = gpd.read_file(io.BytesIO(r.content))
         # Normalise column names to lowercase so tooltip fields always match
         gdf.columns = [c.lower() for c in gdf.columns]
         return gdf
