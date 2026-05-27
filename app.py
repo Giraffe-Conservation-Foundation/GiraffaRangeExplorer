@@ -107,45 +107,6 @@ EXTENSIONS = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False)
-def load_wdpa_africa() -> gpd.GeoDataFrame | None:
-    """Fetch WDPA polygons for Africa from the public UNEP-WCMC FeatureServer."""
-    url = (
-        "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/"
-        "The_World_Database_of_Protected_Areas/FeatureServer/1/query"
-    )
-    all_features: list = []
-    offset = 0
-    while True:
-        try:
-            r = requests.get(url, params={
-                "where": "1=1",
-                "geometry": "-20,-35,55,38",
-                "geometryType": "esriGeometryEnvelope",
-                "inSR": "4326",
-                "spatialRel": "esriSpatialRelIntersects",
-                "outFields": "NAME,DESIG,IUCN_CAT,STATUS",
-                "outSR": "4326",
-                "maxAllowableOffset": 0.01,
-                "resultOffset": offset,
-                "resultRecordCount": 2000,
-                "f": "geojson",
-            }, timeout=60)
-            r.raise_for_status()
-            data = r.json()
-        except Exception:
-            break
-        batch = data.get("features", [])
-        all_features.extend(batch)
-        if not data.get("exceededTransferLimit", False) or len(batch) < 2000:
-            break
-        offset += 2000
-    if not all_features:
-        return None
-    try:
-        return gpd.GeoDataFrame.from_features(all_features, crs="EPSG:4326")
-    except Exception:
-        return None
 
 
 @st.cache_data(show_spinner=False)
@@ -297,34 +258,17 @@ folium.TileLayer(
 ).add_to(m)
 
 # ── Protected Areas (WDPA) ────────────────────────────────────────────────────
-with st.spinner("Loading protected areas…"):
-    _wdpa = load_wdpa_africa()
-
-if _wdpa is not None:
-    # Normalise column names to lowercase so the tooltip fields always match
-    _wdpa.columns = [c.lower() for c in _wdpa.columns]
-    folium.GeoJson(
-        data=_wdpa.__geo_interface__,
-        name="Protected Areas (WDPA)",
-        style_function=lambda f: {
-            "fillColor": "#888888",
-            "color":     "#555555",
-            "weight":    0.8,
-            "fillOpacity": 0.30,
-        },
-        highlight_function=lambda f: {
-            "fillColor": "#666666",
-            "color":     "#333333",
-            "weight":    2.0,
-            "fillOpacity": 0.55,
-        },
-        tooltip=folium.GeoJsonTooltip(
-            fields=["name", "desig", "iucn_cat"],
-            aliases=["Name", "Designation", "IUCN Category"],
-            localize=True,
-        ),
-        show=False,
-    ).add_to(m)
+folium.TileLayer(
+    tiles=(
+        "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/"
+        "The_World_Database_of_Protected_Areas/MapServer/tile/{z}/{y}/{x}"
+    ),
+    name="Protected Areas (WDPA)",
+    attr="© UNEP-WCMC & IUCN, Protected Planet",
+    overlay=True,
+    show=False,
+    opacity=0.5,
+).add_to(m)
 
 # Species layers
 area_stats: dict[str, float] = {}
