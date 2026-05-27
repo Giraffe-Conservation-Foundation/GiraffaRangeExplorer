@@ -258,16 +258,19 @@ folium.TileLayer(
 ).add_to(m)
 
 # ── Protected Areas (WDPA) ────────────────────────────────────────────────────
-folium.TileLayer(
-    tiles=(
+folium.WmsTileLayer(
+    url=(
         "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/"
-        "The_World_Database_of_Protected_Areas/MapServer/tile/{z}/{y}/{x}"
+        "The_World_Database_of_Protected_Areas/MapServer/WMSServer?"
     ),
     name="Protected Areas (WDPA)",
-    attr="© UNEP-WCMC & IUCN, Protected Planet",
+    layers="0",
+    fmt="image/png",
+    transparent=True,
     overlay=True,
     show=False,
-    opacity=0.5,
+    attr="© UNEP-WCMC & IUCN, Protected Planet",
+    version="1.3.0",
 ).add_to(m)
 
 # Species layers
